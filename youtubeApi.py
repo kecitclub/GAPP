@@ -34,13 +34,3 @@ def fetch_youtube_links(api_key, search_term, max_results=10):
         print(response.json())
         return []
 
-# Replace 'YOUR_API_KEY' with your actual YouTube Data API key
-API_KEY = "AIzaSyCxcjIrR_-QXKIaHXLANConjWVnOpPNEp4"
-SEARCH_TERM = "Python programming"
-
-# Fetch video links
-ytlinks = fetch_youtube_links(API_KEY, SEARCH_TERM)
-
-# Print the fetched links
-for i, ytlinks in enumerate(ytlinks, 1):
-    print(f"{i}. {ytlinks}")
