@@ -35,8 +35,8 @@ class Video:
             return video_links
         else:
             # Print the error message if the request fails
-            # print(f"Error: {response.status_code}")
-            # print(response.json())
+            print(f"Error: {response.status_code}")
+            print(response.json())
             return []
 
     
