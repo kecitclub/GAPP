@@ -18,7 +18,7 @@ class Book:
             descriptions = []
 
             books = response.json().get('items', [])
-            for book in books[:5]:  # Displaying top 5 results
+            for book in books[:2]:  # Displaying top 5 results
                 volume_info = book.get('volumeInfo', {})
                 title = volume_info.get('title', 'N/A')
                 description = volume_info.get('description', 'Description not available.')
