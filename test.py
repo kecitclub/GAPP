@@ -1,5 +1,5 @@
 from Book import Book
-from youtubeApi import fetch_youtube_links
+from Video import Video
 from Variable import Variable
 import streamlit as st
 
@@ -67,12 +67,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-video = Video()
-SEARCH_TERM = "Python programming"
-
-video_links = video.fetch_youtube_links(SEARCH_TERM)
-
-# Print the fetched links
-for i, video_links in enumerate(video_links, 1):
-    print(f"{i}. {video_links}")
