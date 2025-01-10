@@ -2,27 +2,23 @@ from Book import Book
 from Video import Video
 from Variable import Variable
 import streamlit as st
+from Chunking import ChunkData
+import speech_recognition as sr
+from llama_cpp import Llama
 
-# # book = Book()
-# # titles,descriptions,images,book_links,authors = book.fetch_book_details("Computer Networks")
-
-# for title,author,image,book_link,description in zip(titles,authors,images,book_links,descriptions):
-#     authors_str = ", ".join(author)
-#     print(f"Title: {title}\nAuthors: {authors_str}\nDescription: {description}\nCover Image: {image}\nMore Info: {book_link}\n")
-
-
-# # links = fetch_youtube_links(Variable.get_variable("youtube_api_key"), "Computer Networks",max_results=5)
-# # for link in links:
-# #     print(link)
 
 def main():
 
     # Initiate LLM
-    model = ""
+    model = Llama(model_path=Variable.get_variable("model_path"),n_ctx=2048)
     # Initiate Book Class
     book = Book()
     # Initiate Video Class
     video = Video()
+    # Instantiate Chunking class
+    chunk_data = ChunkData()
+    # Initialize the recognizer
+    r = sr.Recognizer()
 
     st.title("Study Sathi")
     search_query = st.text_input(label="Enter a text",label_visibility="hidden")
@@ -36,8 +32,19 @@ def main():
     if question or audio:
         # Handle if the input is question in text or audio form
         if audio:
-            # Process audio to text
-            pass
+            # Use the microphone as the audio source
+            with sr.Microphone() as source:
+                print("Say something!")
+                audio = r.listen(source)
+            
+            # Recognize speech using Google Speech Recognition
+            try:
+                text = r.recognize_google(audio)
+                print("You said: " + text)
+            except sr.UnknownValueError:
+                print("Google Speech Recognition could not understand audio")
+            except sr.RequestError as e:
+                print("Could not request results from Google Speech Recognition service; {0}".format(e))
         # Hold conversation with user
         pass
 
@@ -47,16 +54,19 @@ def main():
             # Extract text from image
             # Format the text
             pass
+        
+        chunks = chunk_data.chunk_text("sample.txt")
+
         # Chunk the text
         chunks=[1]
         for chunk in chunks:
-            # Feed the chunks to LLM 
-
+            # Feed the chunks to LLM
+            
             # Generate keywords from each chunk
             keywords = ["TCP/IP","OSI Model"]
             col_l,col_r = st.columns([1,1])
             with col_l:
-                st.markdown("### 📚 Book Recommendation\n")
+                st.markdown("### Book Recommendation\n")
                 for keyword in keywords:
                     # Send the keywords to google books api
                     titles,descriptions,images,book_links,authors = book.fetch_book_details(keyword)
@@ -88,7 +98,6 @@ def main():
                             st.write(f"**{title}**")
                             st.write(f"[Watch Here]({video_link})")
                     
-                # results_video = video.fetch_youtube_links()
                 # Send output to streamlit app
         pass
 

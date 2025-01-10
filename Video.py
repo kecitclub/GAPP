@@ -5,7 +5,7 @@ class Video:
     def __init__(self):
         self.api_key = Variable.get_variable("youtube_api_key")
     
-    def fetch_youtube_links(self, search_term, max_results=5):
+    def fetch_youtube_links(self, search_term, max_results=1):
         # YouTube Data API base URL
         url = "https://www.googleapis.com/youtube/v3/search"
         
@@ -43,7 +43,4 @@ class Video:
             # Print the error message if the request fails
             print(f"Error: {response.status_code}")
             print(response.json())
-            return []
-
-    
-
+            return []   
