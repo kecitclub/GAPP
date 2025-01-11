@@ -23,6 +23,7 @@ class Video:
         response = requests.get(url, params=params)
         # Order by views????
         if response.status_code == 200:
+            print("Success")
             # Parse the response JSON
             data = response.json()
             video_links = []
@@ -43,7 +44,4 @@ class Video:
             # Print the error message if the request fails
             print(f"Error: {response.status_code}")
             print(response.json())
-            return []
-
-    
-
+            return []   

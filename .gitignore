@@ -2,3 +2,10 @@ myenv/
 config.cfg
 __pycache__/
 test.ipynb
+alpaca_nepali_english_mix.csv
+unsloth.Q8_0.gguf
+test.ipynb
+audio_test.py
+gemma-2-2b-it.Q8_0.gguf
+Recognize.py
+unsloth.Q8_0 (1).gguf
