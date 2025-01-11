@@ -5,7 +5,7 @@ class Video:
     def __init__(self):
         self.api_key = Variable.get_variable("youtube_api_key")
     
-    def fetch_youtube_links(self, search_term, max_results=1):
+    def fetch_youtube_links(self, search_term, max_results=5):
         # YouTube Data API base URL
         url = "https://www.googleapis.com/youtube/v3/search"
         
@@ -23,6 +23,7 @@ class Video:
         response = requests.get(url, params=params)
         # Order by views????
         if response.status_code == 200:
+            print("Success")
             # Parse the response JSON
             data = response.json()
             video_links = []

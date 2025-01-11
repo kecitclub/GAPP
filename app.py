@@ -1,257 +1,183 @@
 import streamlit as st
 from streamlit_chat import message
-import time
-import random
+from llama_cpp import Llama
+import speech_recognition as sr
+from Chunking import ChunkData
+from Book import Book
+from Video import Video
 
-# Configure the Streamlit page
-st.set_page_config(page_title="StudySathi", page_icon="📚", layout="wide")
+def load_model():
+    if "llm" not in st.session_state:
+        st.session_state.llm = Llama(model_path="unsloth.Q8_0 (1).gguf", n_ctx=2048)
 
-# Custom CSS to style the app with a dark theme
-st.markdown("""
-    <style>
-    /* Main container styling */
-    .main {
-        background-color: #0E1117;
-        color: #E0E0E0;
-    }
-
-    /* Header styling */
-    .stApp header {
-        background-color: #0E1117;
-        border-bottom: 1px solid #1E2127;
-    }
-
-    /* Sidebar styling */
-    .css-1d391kg {
-        background-color: #1E2127;
-    }
-            .mic-box {
-        position: relative;
-        width: 40px;
-        height: 40px;
-        background-color: #262730;
-        border-radius: 1rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        margin-top: 100px;
-    }
-
-    .mic-box:hover {
-        background-color: #363940;
-    }
-
-    .mic-icon {
-        color: #E0E0E0;
-        font-size: 1.2rem;
-    }
-
-    /* Input box styling */
-    .stTextInput > div > div > input {
-        background-color: #262730;
-        border: 1px solid #363940;
-        border-radius: 2rem;
-        padding: 1rem;
-        font-size: 1rem;
-        color: #E0E0E0;
-        width: 100%;
-    }
-
-    /* File uploader styling in sidebar */
-    .sidebar .stFileUploader > div {
-        background-color: #262730;
-        border: 2px dashed #363940;
-        border-radius: 1rem;
-        padding: 1rem;
-        font-size: 0.9rem;
-        color: #E0E0E0;
-        width: 100%;
-        text-align: center;
-        margin: 1rem 0;
-    }
-
-    /* Button styling */
-    .stButton > button {
-        background-color: #262730;
-        border: 1px solid #363940;
-        border-radius: 1rem;
-        padding: 0.5rem 1rem;
-        color: #E0E0E0;
-        width: 100%;
-    }
-
-    .stButton > button:hover {
-        background-color: #363940;
-        border-color: #464B55;
-        color: #FFFFFF;
-    }
-
-    /* Chat message styling */
-    .message {
-        padding: 1rem;
-        border-radius: 1rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .user-message {
-        background-color: #262730;
-    }
-
-    .bot-message {
-        background-color: #1E2127;
-        border: 1px solid #363940;
-    }
-
-    /* Title styling */
-    h1 {
-        text-align: center;
-        color: #E0E0E0;
-        font-size: 2.5rem !important;
-        margin-bottom: 2rem !important;
-    }
-
-    /* Dark theme overrides */
-    .stApp {
-        background-color: #0E1117;
-    }
-
-    /* Input container with mic button */
-    .input-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .mic-box {
-        position: relative;
-        display: flex;
-        align-items: center;
-        background-color: #262730;
-        border-radius: 1rem;
-        border: 2px solid #363940;
-        padding: 0.5rem;
-        color: #E0E0E0;
-        cursor: pointer;
-        width: fit-content;
-        transition: background-color 0.3s, border-color 0.3s;
-        margin-top: 25px;
-    }
-
-    .mic-box:hover {
-        background-color: #363940;
-        border-color: #464B55;
-    }
-
-    .mic-icon {
-        color: #E0E0E0;
-        font-size: 1.2rem;
-    }
-
-    .mic-text {
-        font-size: 0.9rem;
-        color: #FFFFFF;
-    }
-
-    /* Custom file upload text */
-    .upload-text {
-        color: #E0E0E0;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Initialize session state
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
-if 'last_input' not in st.session_state:
-    st.session_state.last_input = ""
-if 'is_recording' not in st.session_state:
-    st.session_state.is_recording = False
-
-# Sidebar
-with st.sidebar:
-    st.title("StudySathi")
-    st.markdown("---")
-    
-    # New Chat button
-    if st.button("+ New Chat", key="new_chat"):
-        st.session_state.messages = []
-        st.session_state.last_input = ""
-    
-    # File uploader in sidebar
-    st.markdown('<p class="upload-text">Upload Files</p>', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("", 
-                                   type=["txt", "pdf"], 
-                                   label_visibility="collapsed")
-
-# Main content
-st.title("What can I help you learn?")
-
-# Quick action buttons in two columns
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("📝 Generate Study Notes", key="notes"):
-        st.session_state.messages.append({
-            "content": "I'd like to generate study notes.",
-            "is_user": True
-        })
-
-with col2:
-    if st.button("🎯 Practice Problems", key="practice"):
-        st.session_state.messages.append({
-            "content": "I'd like to practice some problems.",
-            "is_user": True
-        })
-
-# Chat history
-for i, msg in enumerate(st.session_state.messages):
-    message(msg['content'], is_user=msg['is_user'], key=f"msg_{i}")
-
-# Chat input section with mic button
-st.markdown('<div id="fixed-input">', unsafe_allow_html=True)
-with st.form(key="chat_form"):
-    col1, col2 = st.columns([1.2, 0.1])
-    with col1:
-        user_input = st.text_input("", 
-                                 placeholder="Ask StudySathi a question...",
-                                 key="user_input")
-    with col2:
-       with st.container():
-            st.markdown(""" 
-                <div class="mic-box" title="Voice Input">
-                    <i class="fas fa-microphone mic-icon"></i>
-                    <span class="mic-text">Voice</span>
-                </div>
-            """, unsafe_allow_html=True)
-    
-    submitted = st.form_submit_button("Submit")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Handle user input
-if submitted and user_input:
-    # Add user message to chat
-    st.session_state.messages.append({"content": user_input, "is_user": True})
-    st.session_state.last_input = user_input
-
-    # Bot response
-    with st.spinner("Thinking..."):
+def transcribe_audio(recognizer):
+    with sr.Microphone() as source:
+        st.info("Listening... Speak now!")
         try:
-            response = f"I understand you're asking about {user_input}. Let me help you with that..."
-            st.session_state.messages.append({"content": response, "is_user": False})
+            # Adjust for ambient noise
+            recognizer.adjust_for_ambient_noise(source)
+            # Listen to the microphone
+            audio = recognizer.listen(source, timeout=15,phrase_time_limit=5)
+            # Perform speech recognition
+            text = recognizer.recognize_google(audio, language="ne-NP")
+            return text
+        except sr.UnknownValueError:
+            return "Sorry, I couldn't understand the audio."
+        except sr.RequestError as e:
+            return f"API error: {e}"
         except Exception as e:
-            st.error(f"An error occurred: {str(e)}. Please try again.")
+            return f"Error: {str(e)}"
 
-# Footer
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #7A7F8C; font-size: 0.875rem;'>
-        StudySathi - Your AI Study Companion
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+
+def main():
+    
+    load_model()
+    
+    book = Book()
+    video = Video()
+
+    chunks = ChunkData()
+
+    recognizer = sr.Recognizer()
+
+    if 'book_recommend' not in st.session_state:
+        st.session_state.book_recommend = False
+    # # Load the LLaMA model
+    # llm = Llama(model_path="unsloth.Q8_0.gguf",n_ctx=2048)
+    
+    # Initialize the conversation history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    
+    # Configure the Streamlit page
+    st.set_page_config(page_title="StudySathi", page_icon="📚", layout="wide")
+
+    # Sidebar
+    with st.sidebar:
+        st.title("Study Sathi")
+        st.markdown("---")
+        
+        # New Chat button
+        if st.button("+ New Chat", key="new_chat"):
+            ## To Do
+            # Create new chat 
+            st.session_state.messages = []
+            st.session_state.last_input = ""
+        
+        # File uploader in sidebar for OCR
+        st.markdown('<p class="upload-text">Upload files for OCR</p>', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("", 
+                                    type=["txt", "pdf","jpg","png"], 
+                                    label_visibility="collapsed")
+
+    # Main content
+
+    st.subheader("What can I help you learn?")
+
+    # Capture input from the user
+    st.session_state.user_input = st.chat_input(placeholder="Ask me a question...")
+
+    # Quick action buttons in two columns
+    col1,col3,ext2,ext3 = st.columns([2,2,1,2])
+    with col1:
+        book_input = st.text_input("Search Book",label_visibility="collapsed")
+    with col1:
+        if st.button("📝 Get Book Recommendations", key="books"):
+            st.write(book_input)
+            if book_input:
+                titles,descriptions,images,book_links,authors = book.fetch_book_details(book_input)
+                for title,description,image,book_link,author in zip(titles,descriptions,images,book_links,authors):
+                    authors_str = ", ".join(author)
+                    col1, col2 = st.columns([1, 5])
+                    with col1:
+                        # Using HTML to control the image size
+                        st.markdown(f'<img src="{image}" alt="Book Cover" width="80">', unsafe_allow_html=True)
+                    with col2:
+                        st.write(f"**{title}**")
+                        st.write(f"**Authors:** {authors_str}")
+                        st.write(f"[More Info]({book_link})")
+                        st.session_state.book_recommend = True
+
+    with col3:
+        video_input = st.text_input("Search Video",label_visibility="collapsed")
+
+    with col3:
+        if st.button("🎯 Get Video Recommendations", key="videos"):
+            if video_input:
+                titles,video_links,thumbnails = video.fetch_youtube_links(video_input,max_results=2)
+                for title,video_link,thumbnail in zip(titles,video_links,thumbnails):
+                    col1, col2 = st.columns([1, 5])
+                    with col1:
+                        # Using HTML to control the image size
+                        st.markdown(f'<img src="{thumbnail}" alt="Book Cover" width="80">', unsafe_allow_html=True)
+                    with col2:
+                        st.write(f"**{title}**")
+                        st.write(f"[Watch Here]({video_link})")
+
+    with ext2:
+        if st.button(label="🎙️"):
+            st.session_state.user_input = transcribe_audio(recognizer)
+            st.write(st.session_state.user_input)
+
+    # if st.session_state.book_recommend:
+        
+
+    # st.markdown('<div style="height: 200px;"></div>', unsafe_allow_html=True)
+
+    # Capture input from both chat input and microphone
+    if 'user_input' not in st.session_state:
+        st.session_state.user_input = ""
+
+    # # Main input from the user
+    # if st.session_state.user_input == "":
+    #     st.session_state.user_input = st.chat_input(placeholder="Ask me a question...")
+
+    # Display chat history
+    for message in st.session_state.messages[-5:]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+
+
+
+    # if user_input or st.session_state.user_input:
+    #     if user_input:
+    #         # Update user input from chat_input or microphone transcription
+    #         st.session_state.user_input = user_input
+    
+    if st.session_state.user_input:
+        # Add the user's message to the history
+        st.session_state.messages.append({"role": "user", "content": st.session_state.user_input})
+        
+        # Display the user's message
+        with st.chat_message("user"):
+            st.markdown(st.session_state.user_input)
+
+        history = st.session_state.messages[-5:]
+        # Generate the response using a cleaner prompt structure
+       
+        conversation_history = "\n".join(
+            [f"{msg['role'].capitalize()}: {msg['content']}" for msg in history]
+        )
+
+        full_prompt = f"{conversation_history}\nassistant (Respond in same language as in query):"
+
+        # Generate the assistant's response
+        response_text = ""
+        with st.chat_message("assistant"):
+            response_container = st.empty()
+            for chunk in st.session_state.llm(full_prompt, stop=["User:", "Assistant:"], stream=True,max_tokens=200):
+                response_text += chunk['choices'][0]['text']
+                response_container.markdown(response_text)
+
+        # Add the assistant's message to the history
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
+        # Clear user input after response
+        st.session_state.user_input = ""
+        user_input=""
+
+
+
+if __name__ == "__main__":
+    main()
